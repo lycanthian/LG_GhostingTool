@@ -33,7 +33,6 @@ class GhostingTool:
 
         PrevShader = mc.shadingNode("lambert", asShader=True, n="PrevShader")
         mc.setAttr(PrevShader + '.color', self.prevColorRGBF[0], self.prevColorRGBF[1], self.prevColorRGBF[2], type='double3')
-        print(f"{mc.setAttr(PrevShader + '.color', self.prevColorRGBF, type='double3')}")
         PrevSG = mc.sets(renderable=True, noSurfaceShader=True, empty=True, name=PrevShader + 'SG')
         mc.connectAttr(PrevShader + '.outColor', PrevSG + '.surfaceShader', force=True)
         print(f"new color for previous frames is {self.prevColorRGBF}")
@@ -60,6 +59,10 @@ class GhostingTool:
         self.nextFramesAmt = newNextFramesAmt
         print(f"New next frames amount is {self.nextFramesAmt}")
         
+    def GhostFrames(self):
+        print("Ghosting frames!")
+        meshes = self.meshes
+
 class GhostingToolWidget(MayaWidget):
     def __init__(self):
         super().__init__()
@@ -111,6 +114,10 @@ class GhostingToolWidget(MayaWidget):
         self.masterLayout.addLayout(self.frameNumberLayout)
         self.masterLayout.addLayout(self.frameNumberBtnLayout)
 
+        self.ghostFramesBtn = QPushButton("Ghost Frames")
+        self.masterLayout.addWidget(self.ghostFramesBtn)
+        self.ghostFramesBtn.clicked.connect(self.GhostFramesBtnClicked)
+
     def MeshSelectBtnClicked(self):
         self.ghostingTool.SetSelectedAsMesh()
         self.meshSelectLineEdit.setText(",".join(self.ghostingTool.meshes))
@@ -135,6 +142,8 @@ class GhostingToolWidget(MayaWidget):
     def SetNextFramesBtnClicked(self):
         self.ghostingTool.SetNextFrames(self.nextFrameNumberLineEdit.text())
 
+    def GhostFramesBtnClicked(self):
+        self.ghostingTool.GhostFrames()
 
     def GetWidgetHash(self):
         return "400b2d649f76aa2add750afbfa95af38"
