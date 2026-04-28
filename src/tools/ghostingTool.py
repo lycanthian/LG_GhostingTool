@@ -30,6 +30,12 @@ class GhostingTool:
         for i in range(len(splitList)):
             splitList[i] = float(splitList[i])
         self.prevColorRGBF = splitList
+
+        PrevShader = mc.shadingNode("lambert", asShader=True, n="PrevShader")
+        mc.setAttr(PrevShader + '.color', self.prevColorRGBF[0], self.prevColorRGBF[1], self.prevColorRGBF[2], type='double3')
+        print(f"{mc.setAttr(PrevShader + '.color', self.prevColorRGBF, type='double3')}")
+        PrevSG = mc.sets(renderable=True, noSurfaceShader=True, empty=True, name=PrevShader + 'SG')
+        mc.connectAttr(PrevShader + '.outColor', PrevSG + '.surfaceShader', force=True)
         print(f"new color for previous frames is {self.prevColorRGBF}")
         
     def SetNextColor(self, newNextColor):
@@ -39,8 +45,21 @@ class GhostingTool:
         for i in range(len(splitList)):
             splitList[i] = float(splitList[i])
         self.nextColorRGBF = splitList
+
+        NextShader = mc.shadingNode("lambert", asShader=True, n="NextShader")
+        mc.setAttr(NextShader + '.color', self.nextColorRGBF[0], self.nextColorRGBF[1], self.nextColorRGBF[2], type='double3')
+        NextSG = mc.sets(renderable=True, noSurfaceShader=True, empty=True, name=NextShader + 'SG')
+        mc.connectAttr(NextShader + '.outColor', NextSG + '.surfaceShader', force=True)
         print(f"new color for next frames is {self.nextColorRGBF}")
 
+    def SetPrevFrames(self, newPrevFramesAmt):
+        self.prevFramesAmt = newPrevFramesAmt
+        print(f"New previous frames amount is {self.prevFramesAmt}")
+
+    def SetNextFrames(self, newNextFramesAmt):
+        self.nextFramesAmt = newNextFramesAmt
+        print(f"New next frames amount is {self.nextFramesAmt}")
+        
 class GhostingToolWidget(MayaWidget):
     def __init__(self):
         super().__init__()
@@ -73,6 +92,24 @@ class GhostingToolWidget(MayaWidget):
         self.masterLayout.addWidget(self.setNextColorBtn)
         self.setNextColorBtn.clicked.connect(self.SetNextColorBtnClicked)
 
+        self.frameNumberLayout = QHBoxLayout()
+        self.frameNumberLayout.addWidget(QLabel("Prev Frames:"))
+        self.prevFrameNumberLineEdit = QLineEdit()
+        self.frameNumberLayout.addWidget(self.prevFrameNumberLineEdit)
+        self.frameNumberLayout.addWidget(QLabel("Next Frames:"))
+        self.nextFrameNumberLineEdit = QLineEdit()
+        self.frameNumberLayout.addWidget(self.nextFrameNumberLineEdit)
+
+        self.frameNumberBtnLayout = QHBoxLayout()
+        self.setPrevFramesBtn = QPushButton("Set Prev Frames")
+        self.frameNumberBtnLayout.addWidget(self.setPrevFramesBtn)
+        self.setPrevFramesBtn.clicked.connect(self.SetPrevFramesBtnClicked)
+        self.setNextFramesBtn = QPushButton("Set Next Frames")
+        self.frameNumberBtnLayout.addWidget(self.setNextFramesBtn)
+        self.setNextFramesBtn.clicked.connect(self.SetNextFramesBtnClicked)
+        
+        self.masterLayout.addLayout(self.frameNumberLayout)
+        self.masterLayout.addLayout(self.frameNumberBtnLayout)
 
     def MeshSelectBtnClicked(self):
         self.ghostingTool.SetSelectedAsMesh()
@@ -83,7 +120,6 @@ class GhostingToolWidget(MayaWidget):
         newColor = QColorDialog.getColor(initial=QColor("blue"), title="Select a Color")
         prevColorRGBF = newColor
         prevColorRGBF = str(prevColorRGBF).replace("PySide6.QtGui.QColor.fromRgbF","")
-        print(f"new control color:", prevColorRGBF)
         self.ghostingTool.SetPrevColor(prevColorRGBF)
 
     def SetNextColorBtnClicked(self):
@@ -91,8 +127,14 @@ class GhostingToolWidget(MayaWidget):
         newColor = QColorDialog.getColor(initial=QColor("blue"), title="Select a Color")
         nextColorRGBF = newColor
         nextColorRGBF = str(nextColorRGBF).replace("PySide6.QtGui.QColor.fromRgbF","")
-        print(f"new control color:", nextColorRGBF)
         self.ghostingTool.SetNextColor(nextColorRGBF)
+
+    def SetPrevFramesBtnClicked(self):
+        self.ghostingTool.SetPrevFrames(self.prevFrameNumberLineEdit.text())
+
+    def SetNextFramesBtnClicked(self):
+        self.ghostingTool.SetNextFrames(self.nextFrameNumberLineEdit.text())
+
 
     def GetWidgetHash(self):
         return "400b2d649f76aa2add750afbfa95af38"
