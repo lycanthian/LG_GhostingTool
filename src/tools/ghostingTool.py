@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QColorDialog
 from PySide6.QtGui import QColor
 from core.MayaWidget import MayaWidget
 import maya.cmds as mc
@@ -9,7 +9,6 @@ importlib.reload(core.MayaUtilities)
 class GhostingTool:
     def __init__(self):
         self.meshes = []
-        self.clips = []
 
     def SetSelectedAsMesh(self):
         selection = mc.ls(sl=True)
@@ -62,6 +61,19 @@ class GhostingTool:
     def GhostFrames(self):
         print("Ghosting frames!")
         meshes = self.meshes
+        currentFrame = mc.currentTime(query=True)
+        currentFrame = int(currentFrame)
+        prevFramesAmt = int(self.prevFramesAmt)
+        nextFramesAmt = int(self.nextFramesAmt)
+
+        for i in range(currentFrame - prevFramesAmt, currentFrame):
+            mc.currentTime(i)
+            mc.duplicate('pSphere1', n="Ghost"+meshes+str(i))
+
+        for i in range(currentFrame, currentFrame + nextFramesAmt):
+            mc.currentTime(i)
+            mc.duplicate('pSphere1', n="Ghost"+meshes+str(i))
+
 
 class GhostingToolWidget(MayaWidget):
     def __init__(self):
