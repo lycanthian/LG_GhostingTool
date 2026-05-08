@@ -6,8 +6,6 @@ import importlib
 import core.MayaUtilities
 importlib.reload(core.MayaUtilities)
 
-# test commit
-
 class GhostingTool:
     def __init__(self):
         self.meshes = []
@@ -52,29 +50,72 @@ class GhostingTool:
         mc.connectAttr(NextShader + '.outColor', NextSG + '.surfaceShader', force=True)
         print(f"new color for next frames is {self.nextColorRGBF}")
 
-    def SetPrevFrames(self, newPrevFramesAmt):
-        self.prevFramesAmt = newPrevFramesAmt
-        print(f"New previous frames amount is {self.prevFramesAmt}")
+    def SetPrevFrames(self, newPrevFrames):
+        self.prevFrames = newPrevFrames
+        print(f"New previous frames amount is {self.prevFrames}")
 
-    def SetNextFrames(self, newNextFramesAmt):
-        self.nextFramesAmt = newNextFramesAmt
-        print(f"New next frames amount is {self.nextFramesAmt}")
+    def SetNextFrames(self, newnextFrames):
+        self.nextFrames = newnextFrames
+        print(f"New next frames amount is {self.nextFrames}")
         
+    def SetStartRange(self, newStartRange):
+        self.startRange = newStartRange
+        print(f"The ghost range will start at {self.startRange}.")
+    
+    def SetEndRange(self, newEndRange):
+        self.endRange = newEndRange
+        print(f"The ghost range will end at {self.endRange}.")
+
     def GhostFrames(self):
         print("Ghosting frames!")
         meshes = self.meshes
         currentFrame = mc.currentTime(query=True)
         currentFrame = int(currentFrame)
-        prevFramesAmt = int(self.prevFramesAmt)
-        nextFramesAmt = int(self.nextFramesAmt)
+        prevFrames = int(self.prevFrames)
+        nextFrames = int(self.nextFrames)
+        startRange = int(self.startRange)
+        endRange = int(self.endRange)
 
-        for i in range(currentFrame - prevFramesAmt, currentFrame):
-            mc.currentTime(i)
-            mc.duplicate('pSphere1', n="Ghost"+meshes+str(i))
+        mc.select(clear=True)
+        mc.group(empty=True, n=f"GhostedFrames_grp")
 
-        for i in range(currentFrame, currentFrame + nextFramesAmt):
+        for i in range(startRange, endRange):
             mc.currentTime(i)
-            mc.duplicate('pSphere1', n="Ghost"+meshes+str(i))
+            duplicateName="Ghost_"+str(meshes[0])+"_"+str(i)
+            mc.duplicate(meshes, n=duplicateName)
+            print(f"{duplicateName}")
+            
+            mc.currentTime(i-prevFrames-1)
+            mc.setAttr(f"{duplicateName}.v", 0)
+            mc.setKeyframe(f"{duplicateName}.v")
+            
+            mc.currentTime(i-prevFrames)
+            mc.setAttr(f"{duplicateName}.v", 1)
+            mc.setKeyframe(f"{duplicateName}.v")
+            
+            mc.currentTime(i-1)
+            mc.setAttr(f"{duplicateName}.v", 1)
+            mc.setKeyframe(f"{duplicateName}.v")
+            
+            mc.currentTime(i)
+            mc.setAttr(f"{duplicateName}.v", 0)
+            mc.setKeyframe(f"{duplicateName}.v")
+            
+            mc.currentTime(i+1)
+            mc.setAttr(f"{duplicateName}.v", 1)
+            mc.setKeyframe(f"{duplicateName}.v")
+            
+            mc.currentTime(i+nextFrames)
+            mc.setAttr(f"{duplicateName}.v", 1)
+            mc.setKeyframe(f"{duplicateName}.v")
+            
+            mc.currentTime(i+nextFrames+1)
+            mc.setAttr(f"{duplicateName}.v", 0)
+            mc.setKeyframe(f"{duplicateName}.v")
+            
+            mc.parent(f"{duplicateName}", "GhostedFrames_grp")
+            
+            mc.currentTime(i)
 
 
 class GhostingToolWidget(MayaWidget):
@@ -128,6 +169,25 @@ class GhostingToolWidget(MayaWidget):
         self.masterLayout.addLayout(self.frameNumberLayout)
         self.masterLayout.addLayout(self.frameNumberBtnLayout)
 
+        self.rangeLayout = QHBoxLayout()
+        self.rangeLayout.addWidget(QLabel("Start Frame:"))
+        self.startRangeNumberLineEdit = QLineEdit()
+        self.rangeLayout.addWidget(self.startRangeNumberLineEdit)
+        self.rangeLayout.addWidget(QLabel("End Range:"))
+        self.endRangeNumberLineEdit = QLineEdit()
+        self.rangeLayout.addWidget(self.endRangeNumberLineEdit)
+
+        self.rangeBtnLayout = QHBoxLayout()
+        self.setStartRangeBtn = QPushButton("Set Start Frame")
+        self.rangeBtnLayout.addWidget(self.setStartRangeBtn)
+        self.setStartRangeBtn.clicked.connect(self.SetStartRangeBtnClicked)
+        self.setEndRangeBtn = QPushButton("Set End Frame")
+        self.rangeBtnLayout.addWidget(self.setEndRangeBtn)
+        self.setEndRangeBtn.clicked.connect(self.SetEndRangeBtnClicked)
+        
+        self.masterLayout.addLayout(self.rangeLayout)
+        self.masterLayout.addLayout(self.rangeBtnLayout)
+
         self.ghostFramesBtn = QPushButton("Ghost Frames")
         self.masterLayout.addWidget(self.ghostFramesBtn)
         self.ghostFramesBtn.clicked.connect(self.GhostFramesBtnClicked)
@@ -155,6 +215,12 @@ class GhostingToolWidget(MayaWidget):
 
     def SetNextFramesBtnClicked(self):
         self.ghostingTool.SetNextFrames(self.nextFrameNumberLineEdit.text())
+
+    def SetStartRangeBtnClicked(self):
+        self.ghostingTool.SetStartRange(self.startRangeNumberLineEdit.text())
+
+    def SetEndRangeBtnClicked(self):
+        self.ghostingTool.SetEndRange(self.endRangeNumberLineEdit.text())
 
     def GhostFramesBtnClicked(self):
         self.ghostingTool.GhostFrames()
