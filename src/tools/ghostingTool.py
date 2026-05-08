@@ -22,33 +22,19 @@ class GhostingTool:
             
             self.meshes = selection
 
-    def SetPrevColor(self, newPrevColor):
-        self.prevColorRGBF = newPrevColor
-        self.prevColorRGBF = self.prevColorRGBF.removeprefix('(').removesuffix(')')
-        splitList = self.prevColorRGBF.split(",")
+    def SetGhostColor(self, newGhostColor):
+        self.ghostColorRGBF = newGhostColor
+        self.ghostColorRGBF = self.ghostColorRGBF.removeprefix('(').removesuffix(')')
+        splitList = self.ghostColorRGBF.split(",")
         for i in range(len(splitList)):
             splitList[i] = float(splitList[i])
-        self.prevColorRGBF = splitList
+        self.ghostColorRGBF = splitList
 
-        PrevShader = mc.shadingNode("lambert", asShader=True, n="PrevShader")
-        mc.setAttr(PrevShader + '.color', self.prevColorRGBF[0], self.prevColorRGBF[1], self.prevColorRGBF[2], type='double3')
-        PrevSG = mc.sets(renderable=True, noSurfaceShader=True, empty=True, name=PrevShader + 'SG')
-        mc.connectAttr(PrevShader + '.outColor', PrevSG + '.surfaceShader', force=True)
-        print(f"new color for previous frames is {self.prevColorRGBF}")
-        
-    def SetNextColor(self, newNextColor):
-        self.nextColorRGBF = newNextColor
-        self.nextColorRGBF = self.nextColorRGBF.removeprefix('(').removesuffix(')')
-        splitList = self.nextColorRGBF.split(",")
-        for i in range(len(splitList)):
-            splitList[i] = float(splitList[i])
-        self.nextColorRGBF = splitList
-
-        NextShader = mc.shadingNode("lambert", asShader=True, n="NextShader")
-        mc.setAttr(NextShader + '.color', self.nextColorRGBF[0], self.nextColorRGBF[1], self.nextColorRGBF[2], type='double3')
-        NextSG = mc.sets(renderable=True, noSurfaceShader=True, empty=True, name=NextShader + 'SG')
-        mc.connectAttr(NextShader + '.outColor', NextSG + '.surfaceShader', force=True)
-        print(f"new color for next frames is {self.nextColorRGBF}")
+        GhostShader = mc.shadingNode("lambert", asShader=True, n="GhostShader")
+        mc.setAttr(GhostShader + '.color', self.ghostColorRGBF[0], self.ghostColorRGBF[1], self.ghostColorRGBF[2], type='double3')
+        GhostSG = mc.sets(renderable=True, noSurfaceShader=True, empty=True, name=GhostShader + 'SG')
+        mc.connectAttr(GhostShader + '.outColor', GhostSG + '.surfaceShader', force=True)
+        print(f"new color for ghosted frames is {self.ghostColorRGBF}")
 
     def SetPrevFrames(self, newPrevFrames):
         self.prevFrames = newPrevFrames
@@ -83,6 +69,7 @@ class GhostingTool:
             mc.currentTime(i)
             duplicateName="Ghost_"+str(meshes[0])+"_"+str(i)
             mc.duplicate(meshes, n=duplicateName)
+            mc.sets(f"{duplicateName}", edit=True, forceElement="GhostShaderSG")
             print(f"{duplicateName}")
             
             mc.currentTime(i-prevFrames-1)
@@ -139,16 +126,12 @@ class GhostingToolWidget(MayaWidget):
         meshSelectLayout.addWidget(meshSelectBtn)
         meshSelectBtn.clicked.connect(self.MeshSelectBtnClicked)
 
-        self.masterLayout.addWidget(QLabel("Now set colors for past and forward frames."))
+        self.masterLayout.addWidget(QLabel("Now set colors for ghosted frames."))
         
         self.colorBtnLayout = QHBoxLayout()
-        self.setPrevColorBtn = QPushButton("Set Previous Color")
-        self.masterLayout.addWidget(self.setPrevColorBtn)
-        self.setPrevColorBtn.clicked.connect(self.SetPrevColorBtnClicked)
-
-        self.setNextColorBtn = QPushButton("Set Next Color")
-        self.masterLayout.addWidget(self.setNextColorBtn)
-        self.setNextColorBtn.clicked.connect(self.SetNextColorBtnClicked)
+        self.setGhostColorBtn = QPushButton("Set Ghosting Color")
+        self.masterLayout.addWidget(self.setGhostColorBtn)
+        self.setGhostColorBtn.clicked.connect(self.SetGhostColorBtnClicked)
 
         self.frameNumberLayout = QHBoxLayout()
         self.frameNumberLayout.addWidget(QLabel("Prev Frames:"))
@@ -196,19 +179,12 @@ class GhostingToolWidget(MayaWidget):
         self.ghostingTool.SetSelectedAsMesh()
         self.meshSelectLineEdit.setText(",".join(self.ghostingTool.meshes))
 
-    def SetPrevColorBtnClicked(self):
+    def SetGhostColorBtnClicked(self):
         dialog = QColorDialog()
         newColor = QColorDialog.getColor(initial=QColor("blue"), title="Select a Color")
-        prevColorRGBF = newColor
-        prevColorRGBF = str(prevColorRGBF).replace("PySide6.QtGui.QColor.fromRgbF","")
-        self.ghostingTool.SetPrevColor(prevColorRGBF)
-
-    def SetNextColorBtnClicked(self):
-        dialog = QColorDialog()
-        newColor = QColorDialog.getColor(initial=QColor("blue"), title="Select a Color")
-        nextColorRGBF = newColor
-        nextColorRGBF = str(nextColorRGBF).replace("PySide6.QtGui.QColor.fromRgbF","")
-        self.ghostingTool.SetNextColor(nextColorRGBF)
+        ghostColorRGBF = newColor
+        ghostColorRGBF = str(ghostColorRGBF).replace("PySide6.QtGui.QColor.fromRgbF","")
+        self.ghostingTool.SetGhostColor(ghostColorRGBF)
 
     def SetPrevFramesBtnClicked(self):
         self.ghostingTool.SetPrevFrames(self.prevFrameNumberLineEdit.text())
